@@ -1,6 +1,8 @@
 use std::{
-    env::current_dir,
-    fs::{read_dir, read_to_string},
+    env::{self, current_dir},
+    fs::{read_dir, read_to_string, File, Permissions},
+    io::Write,
+    os::unix::fs::PermissionsExt,
     path::PathBuf,
     process::Command,
 };
@@ -12,6 +14,24 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let root_dir = find_git_root().ok_or("Failed to find git root")?;
+
+    let args = env::args().skip(1).collect::<Vec<String>>();
+
+    if args.len() == 2 {
+        let mut hook_path = root_dir;
+        hook_path.push(".git");
+        hook_path.push("hooks");
+        hook_path.push("pre-push");
+
+        let mut file = File::create(&hook_path)?;
+        file.set_permissions(Permissions::from_mode(0o755))?;
+
+        file.write_all(b"#!/usr/bin/sh\nbelay")?;
+
+        println!("Created hook `.git/hooks/pre-push`");
+
+        return Ok(());
+    }
 
     let github_workflows_dir = {
         let mut gh = root_dir;

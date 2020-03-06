@@ -103,3 +103,33 @@ Checking 'tough test':
 
     Ok(())
 }
+
+#[test]
+fn belay_hook_push() -> TestResult {
+    let working_dir = TempDir::new()?;
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(working_dir.path())
+        .assert()
+        .success();
+
+    Command::cargo_bin(crate_name!())?
+        .arg("hook")
+        .arg("push")
+        .current_dir(working_dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::similar("Created hook `.git/hooks/pre-push`").trim());
+
+    assert!(working_dir
+        .child(".git")
+        .child("hooks")
+        .child("pre-push")
+        .path()
+        .exists());
+
+    Ok(())
+
+    // TODO actually validate the two args, allow commit hook
+}
