@@ -1,0 +1,21 @@
+name: Rust
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: sudo apt install -y nasm
+    - name: Build
+      run: cargo build
+    - name: Run tests
+      run: cargo test -- --nocapture
+    - name: Clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    - name: Format
+      run: cargo fmt --all -- --check
