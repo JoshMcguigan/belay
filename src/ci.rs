@@ -1,4 +1,5 @@
 pub mod github;
+pub mod gitlab;
 
 pub struct Task {
     pub name: Option<String>,
