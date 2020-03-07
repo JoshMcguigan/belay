@@ -13,16 +13,24 @@ pub struct GitlabCiConfig {
     jobs: HashMap<String, GitlabCiConfigJob>,
 }
 
+/// All fields which aren't explicitly configured in this struct are
+/// parsed as `jobs`, since jobs can have (almost) any name.
+///
+/// Although all actual jobs will have a script field, the field
+/// is marked as optional here to support parsing config files
+/// which have extra fields in the root (see the `cache` key
+/// in the example gitlab file).
 #[derive(Deserialize)]
 pub struct GitlabCiConfigJob {
-    script: Vec<String>,
+    script: Option<Vec<String>>,
 }
 
 impl TaskList for GitlabCiConfig {
     fn all_tasks(&self) -> Vec<Task> {
         self.jobs
             .values()
-            .flat_map(|job| &job.script)
+            .filter_map(|job| job.script.as_ref())
+            .flat_map(|script: &Vec<String>| script)
             .map(|cmd| Task {
                 name: None,
                 command: cmd.clone(),
@@ -42,10 +50,6 @@ mod tests {
         let gitlab_yaml = include_str!("../../tests/gitlab_parse_check.yml");
 
         let gitlab_ci_config = serde_yaml::from_str::<GitlabCiConfig>(gitlab_yaml)?;
-
-        assert_eq!(1, gitlab_ci_config.jobs.len());
-
-        assert_eq!(5, gitlab_ci_config.jobs["test"].script.len());
 
         // tasks returns two less than all tasks because we
         // don't want to `rustup component add`

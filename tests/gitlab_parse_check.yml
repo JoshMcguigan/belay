@@ -3,6 +3,10 @@ image: rust:1.41
 stages:
   - main
 
+cache:
+  paths:
+    - target
+
 test:
   stage: main
   script:
