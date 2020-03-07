@@ -38,7 +38,7 @@ mod tests {
     type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
     #[test]
-    fn parse_github_yaml() -> Result<()> {
+    fn parse_gitlab_yaml() -> Result<()> {
         let gitlab_yaml = include_str!("../../tests/gitlab_parse_check.yml");
 
         let gitlab_ci_config = serde_yaml::from_str::<GitlabCiConfig>(gitlab_yaml)?;
