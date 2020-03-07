@@ -57,7 +57,7 @@ fn main() -> Result<()> {
         let mut file = File::create(&hook_path)?;
         file.set_permissions(Permissions::from_mode(0o755))?;
 
-        file.write_all(b"#!/usr/bin/sh\nbelay")?;
+        file.write_all(b"#!/bin/sh\nbelay")?;
 
         println!("Created hook `.git/hooks/{}`", hook_filename);
 
