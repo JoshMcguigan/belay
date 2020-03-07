@@ -8,39 +8,13 @@ use std::{
 };
 use structopt::StructOpt;
 
+mod args;
+use args::{Args, Subcommand};
+
 mod ci;
 use ci::{github::GitHubCiConfig, gitlab::GitlabCiConfig, TaskList};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-#[derive(StructOpt)]
-struct Args {
-    #[structopt(subcommand)]
-    subcommand: Option<Subcommand>,
-}
-
-#[derive(StructOpt)]
-enum Subcommand {
-    Hook {
-        #[structopt(subcommand)]
-        hook_type: HookType,
-    },
-}
-
-#[derive(StructOpt)]
-enum HookType {
-    Commit,
-    Push,
-}
-
-impl HookType {
-    fn filename(&self) -> String {
-        match self {
-            HookType::Commit => String::from("pre-commit"),
-            HookType::Push => String::from("pre-push"),
-        }
-    }
-}
 
 fn main() -> Result<()> {
     let root_dir = find_git_root().ok_or("Failed to find git root")?;
