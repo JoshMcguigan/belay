@@ -47,13 +47,9 @@ mod tests {
 
         assert_eq!(5, gitlab_ci_config.jobs["test"].script.len());
 
-        // // all tasks returns one less than the build job, because the
-        // // first step doesn't have a "run" field
-        // assert_eq!(5, github_ci_config.all_tasks().len());
-
-        // // tasks returns one less than all tasks because we
-        // // don't want to `sudo apt install -y nasm`
-        // assert_eq!(4, github_ci_config.tasks().len());
+        // tasks returns two less than all tasks because we
+        // don't want to `rustup component add`
+        assert_eq!(3, gitlab_ci_config.tasks().len());
 
         Ok(())
     }

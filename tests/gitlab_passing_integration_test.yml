@@ -1,0 +1,9 @@
+image: rust:1.41
+
+stages:
+  - main
+
+test:
+  stage: main
+  script:
+    - echo hello

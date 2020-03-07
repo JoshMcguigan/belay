@@ -17,7 +17,7 @@ pub trait TaskList {
         self.all_tasks()
             .into_iter()
             .filter(|task| {
-                let command_blacklist = vec!["apt install"];
+                let command_blacklist = vec!["apt install", "rustup component add"];
 
                 for blacklisted_command in command_blacklist {
                     if task.command.contains(blacklisted_command) {

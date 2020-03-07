@@ -72,6 +72,32 @@ Success!
 }
 
 #[test]
+fn belay_in_gitlab_ci_dir() -> TestResult {
+    let working_dir = TempDir::new()?;
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(working_dir.path())
+        .assert()
+        .success();
+    let github_yaml = include_str!("./gitlab_passing_integration_test.yml");
+    working_dir.child(".gitlab-ci.yml").write_str(github_yaml)?;
+
+    Command::cargo_bin(crate_name!())?
+        .current_dir(working_dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::similar(
+            r#"Checking:
+hello
+Success!
+"#,
+        ));
+
+    Ok(())
+}
+
+#[test]
 fn belay_in_github_ci_dir_fails() -> TestResult {
     let working_dir = TempDir::new()?;
 

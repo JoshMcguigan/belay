@@ -3,13 +3,13 @@ use std::{
     fs::{read_dir, read_to_string, File, Permissions},
     io::Write,
     os::unix::fs::PermissionsExt,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
 };
 use structopt::StructOpt;
 
 mod ci;
-use ci::{github::GitHubCiConfig, TaskList};
+use ci::{github::GitHubCiConfig, gitlab::GitlabCiConfig, TaskList};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -64,24 +64,13 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let github_workflows_dir = {
-        let mut gh = root_dir;
-        gh.push(".github");
-        gh.push("workflows");
-
-        gh
+    let ci_config: Box<dyn TaskList> = match (handle_github(&root_dir), handle_gitlab(&root_dir)) {
+        (Ok(config), _) => Box::new(config),
+        (_, Ok(config)) => Box::new(config),
+        _ => return Err("Unable to find CI configuration".into()),
     };
 
-    let workflow = read_dir(github_workflows_dir)
-        .map_err(|_| "Unable to find CI configuration")?
-        .filter_map(|entry| entry.ok())
-        .map(|entry| entry.path())
-        .next()
-        .ok_or("Missing GitHub workflow")?;
-
-    let github_ci_config = serde_yaml::from_str::<GitHubCiConfig>(&read_to_string(workflow)?)?;
-
-    for task in github_ci_config.tasks() {
+    for task in ci_config.tasks() {
         if let Some(task_name) = &task.name {
             println!("Checking '{}':", task_name);
         } else {
@@ -97,6 +86,40 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn handle_github(root_dir: &Path) -> Result<GitHubCiConfig> {
+    let github_workflows_dir = {
+        let mut gh = root_dir.to_path_buf();
+        gh.push(".github");
+        gh.push("workflows");
+
+        gh
+    };
+
+    let workflow = read_dir(github_workflows_dir)
+        .map_err(|_| "Unable to find CI configuration")?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .next()
+        .ok_or("Missing GitHub workflow")?;
+
+    Ok(serde_yaml::from_str::<GitHubCiConfig>(&read_to_string(
+        workflow,
+    )?)?)
+}
+
+fn handle_gitlab(root_dir: &Path) -> Result<GitlabCiConfig> {
+    let file_path = {
+        let mut path = root_dir.to_path_buf();
+        path.push(".gitlab-ci.yml");
+
+        path
+    };
+
+    Ok(serde_yaml::from_str::<GitlabCiConfig>(&read_to_string(
+        file_path,
+    )?)?)
 }
 
 fn find_git_root() -> Option<PathBuf> {
