@@ -24,6 +24,12 @@ $ belay hook push
 $ belay hook commit
 ```
 
+### Install
+
+```bash
+cargo install --force belay
+```
+
 ## License
 
 Licensed under either of
