@@ -88,7 +88,7 @@ fn belay_in_gitlab_ci_dir() -> TestResult {
         .assert()
         .success()
         .stdout(predicate::str::similar(
-            r#"Checking:
+            r#"Checking 'echo hello':
 hello
 Success!
 "#,

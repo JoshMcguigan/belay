@@ -3,7 +3,7 @@ name = "belay"
 description = "Run your CI checks locally to git push with confidence"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/JoshMcguigan/belay"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Josh Mcguigan"]
 edition = "2018"
 

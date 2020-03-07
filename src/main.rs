@@ -12,7 +12,7 @@ mod args;
 use args::{Args, Subcommand};
 
 mod ci;
-use ci::{github::GitHubCiConfig, gitlab::GitlabCiConfig, TaskList};
+use ci::{github::GitHubCiConfig, gitlab::GitlabCiConfig, Task, TaskList};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -45,12 +45,11 @@ fn main() -> Result<()> {
     };
 
     for task in ci_config.tasks() {
-        if let Some(task_name) = &task.name {
-            println!("Checking '{}':", task_name);
-        } else {
-            println!("Checking:");
-        };
-        let status = Command::new("sh").arg("-c").arg(task.command).status()?;
+        let Task { name, command } = task;
+        let task_name = name.unwrap_or_else(|| command.clone());
+        println!("Checking '{}':", task_name);
+
+        let status = Command::new("sh").arg("-c").arg(command).status()?;
 
         if status.success() {
             println!("Success!");
