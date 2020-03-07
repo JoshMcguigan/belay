@@ -1,5 +1,8 @@
 [package]
 name = "belay"
+description = "Run your CI checks locally to git push with confidence"
+license = "MIT/Apache-2.0"
+repository = "https://github.com/JoshMcguigan/belay"
 version = "0.1.0"
 authors = ["Josh Mcguigan"]
 edition = "2018"
