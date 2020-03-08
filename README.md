@@ -1,4 +1,4 @@
-# Belay
+# Belay [![crates.io badge](https://img.shields.io/crates/v/belay.svg)](https://crates.io/crates/belay) [![github action badge](https://github.com/JoshMcguigan/belay/workflows/Rust/badge.svg)](https://github.com/JoshMcguigan/belay/actions)
 
 Belay makes it easy to run your CI checks locally, so you can `git push` with confidence.
 
