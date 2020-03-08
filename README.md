@@ -1,9 +1,14 @@
 # Belay
 
-Belay makes it easy to run your CI checks locally.
+Belay makes it easy to run your CI checks locally, so you can `git push` with confidence.
+
+[![asciicast](https://asciinema.org/a/okeJVtb2YJFHneYnS9ZnObBmK.svg)](https://asciinema.org/a/okeJVtb2YJFHneYnS9ZnObBmK)
+
+### Usage
+
+In a git repo with either Gitlab or GitHub CI configured, running `belay` with no arguments will parse your CI configuration and run your CI scripts on your local machine.
 
 ```bash
-# in a git repo with either gitlab or github CI configured
 $ belay
 Checking 'build':
 Success!
