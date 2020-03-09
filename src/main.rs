@@ -1,12 +1,14 @@
 use std::{
     env::current_dir,
-    fs::{read_dir, read_to_string, File, Permissions},
+    fs::{read_dir, read_to_string, File},
     io::Write,
-    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     process::Command,
 };
 use structopt::StructOpt;
+
+#[cfg(not(windows))]
+use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
 mod args;
 use args::{Args, Subcommand};
@@ -29,6 +31,8 @@ fn main() -> Result<()> {
         hook_path.push(&hook_filename);
 
         let mut file = File::create(&hook_path)?;
+
+        #[cfg(not(windows))]
         file.set_permissions(Permissions::from_mode(0o755))?;
 
         file.write_all(b"#!/bin/sh\nbelay")?;
@@ -49,7 +53,10 @@ fn main() -> Result<()> {
         let task_name = name.unwrap_or_else(|| command.clone());
         println!("Checking '{}':", task_name);
 
+        #[cfg(not(windows))]
         let status = Command::new("sh").arg("-c").arg(command).status()?;
+        #[cfg(windows)]
+        let status = Command::new("cmd").arg("/c").arg(command).status()?;
 
         if status.success() {
             println!("Success!");
