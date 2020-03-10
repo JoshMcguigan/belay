@@ -1,4 +1,5 @@
 use std::{
+    convert::TryFrom,
     env::current_dir,
     fs::{read_dir, read_to_string, File},
     io::Write,
@@ -14,7 +15,7 @@ mod args;
 use args::{Args, Subcommand};
 
 mod ci;
-use ci::{github::GitHubCiConfig, gitlab::GitlabCiConfig, Task, TaskList};
+use ci::{github, gitlab::GitlabCiConfig, Task, TaskList};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -68,7 +69,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn handle_github(root_dir: &Path) -> Result<GitHubCiConfig> {
+fn handle_github(root_dir: &Path) -> Result<github::CiConfig> {
     let github_workflows_dir = {
         let mut gh = root_dir.to_path_buf();
         gh.push(".github");
@@ -84,9 +85,9 @@ fn handle_github(root_dir: &Path) -> Result<GitHubCiConfig> {
         .next()
         .ok_or("Missing GitHub workflow")?;
 
-    Ok(serde_yaml::from_str::<GitHubCiConfig>(&read_to_string(
-        workflow,
-    )?)?)
+    Ok(github::CiConfig::try_from(
+        read_to_string(workflow)?.as_str(),
+    )?)
 }
 
 fn handle_gitlab(root_dir: &Path) -> Result<GitlabCiConfig> {

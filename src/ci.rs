@@ -30,3 +30,16 @@ pub trait TaskList {
             .collect()
     }
 }
+
+impl TaskList for github::CiConfig {
+    fn all_tasks(&self) -> Vec<Task> {
+        self.jobs
+            .values()
+            .flat_map(|job| &job.steps)
+            .map(|step| Task {
+                name: step.name.clone(),
+                command: step.run.clone(),
+            })
+            .collect()
+    }
+}
