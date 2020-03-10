@@ -61,12 +61,15 @@ fn belay_in_github_ci_dir() -> TestResult {
         .current_dir(working_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::similar(
-            r#"Checking 'Say hello':
+        .stdout(
+            predicate::str::similar(
+                r#"Checking 'Say hello':
 hello
 Success!
 "#,
-        ));
+            )
+            .normalize(),
+        );
 
     Ok(())
 }
@@ -87,12 +90,15 @@ fn belay_in_gitlab_ci_dir() -> TestResult {
         .current_dir(working_dir.path())
         .assert()
         .success()
-        .stdout(predicate::str::similar(
-            r#"Checking 'echo hello':
+        .stdout(
+            predicate::str::similar(
+                r#"Checking 'echo hello':
 hello
 Success!
 "#,
-        ));
+            )
+            .normalize(),
+        );
 
     Ok(())
 }
@@ -118,13 +124,16 @@ fn belay_in_github_ci_dir_fails() -> TestResult {
         .current_dir(working_dir.path())
         .assert()
         .failure()
-        .stdout(predicate::str::similar(
-            r#"Checking 'Say hello':
+        .stdout(
+            predicate::str::similar(
+                r#"Checking 'Say hello':
 hello
 Success!
 Checking 'tough test':
 "#,
-        ))
+            )
+            .normalize(),
+        )
         .stderr(predicate::str::similar("Error: \"Failed\"").trim());
 
     Ok(())
