@@ -66,10 +66,61 @@ fn belay_in_github_ci_dir() -> TestResult {
                 r#"Checking 'Say hello':
 hello
 Success!
+Checking 'Say goodbye':
+goodbye
+Success!
 "#,
             )
             .normalize(),
         );
+
+    Ok(())
+}
+
+#[test]
+fn belay_in_github_ci_dir_with_multiple_workflows() -> TestResult {
+    let working_dir = TempDir::new()?;
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(working_dir.path())
+        .assert()
+        .success();
+    fs::create_dir_all(working_dir.child(".github").child("workflows").path())?;
+
+    let github_yaml = include_str!("./github_passing_integration_test.yml");
+    working_dir
+        .child(".github")
+        .child("workflows")
+        .child("rust.yml")
+        .write_str(github_yaml)?;
+    let github_yaml = include_str!("./github_failing_integration_test.yml");
+    working_dir
+        .child(".github")
+        .child("workflows")
+        .child("rust2.yml")
+        .write_str(github_yaml)?;
+
+    // workflows should run in alphabetical order, and scripts which
+    // are exactly the same should not be run again
+    Command::cargo_bin(crate_name!())?
+        .current_dir(working_dir.path())
+        .assert()
+        .failure()
+        .stdout(
+            predicate::str::similar(
+                r#"Checking 'Say hello':
+hello
+Success!
+Checking 'Say goodbye':
+goodbye
+Success!
+Checking 'tough test':
+"#,
+            )
+            .normalize(),
+        )
+        .stderr(predicate::str::similar("Error: \"Failed\"").trim());
 
     Ok(())
 }
@@ -165,6 +216,4 @@ fn belay_hook_push() -> TestResult {
         .exists());
 
     Ok(())
-
-    // TODO actually validate the two args, allow commit hook
 }

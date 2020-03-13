@@ -9,7 +9,7 @@ use std::{
 use structopt::StructOpt;
 
 #[cfg(not(windows))]
-use std::{fs::Permissions, os::unix::fs::PermissionsExt};
+use std::{collections::HashSet, fs::Permissions, os::unix::fs::PermissionsExt};
 
 mod args;
 use args::{Args, Subcommand};
@@ -43,33 +43,47 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let ci_config: Box<dyn TaskList> = match (handle_github(&root_dir), handle_gitlab(&root_dir)) {
-        (Ok(config), _) => Box::new(config),
-        (_, Ok(config)) => Box::new(config),
-        _ => return Err("Unable to find CI configuration".into()),
-    };
+    let ci_configs: Vec<Box<dyn TaskList>> =
+        match (handle_github(&root_dir), handle_gitlab(&root_dir)) {
+            (Ok(configs), _) => configs
+                .into_iter()
+                .map(|c| Box::new(c) as Box<dyn TaskList>)
+                .collect(),
+            (_, Ok(config)) => vec![Box::new(config)],
+            _ => return Err("Unable to find CI configuration".into()),
+        };
 
-    for task in ci_config.tasks() {
-        let Task { name, command } = task;
-        let task_name = name.unwrap_or_else(|| command.clone());
-        println!("Checking '{}':", task_name);
+    let mut completed_commands = HashSet::new();
+    for ci_config in ci_configs {
+        for task in ci_config.tasks() {
+            let Task { name, command } = task;
 
-        #[cfg(not(windows))]
-        let status = Command::new("sh").arg("-c").arg(command).status()?;
-        #[cfg(windows)]
-        let status = Command::new("cmd").arg("/c").arg(command).status()?;
+            // we want to de-duplicate commands across CI configurations
+            if completed_commands.contains(&command) {
+                continue;
+            }
 
-        if status.success() {
-            println!("Success!");
-        } else {
-            return Err("Failed".into());
+            let task_name = name.unwrap_or_else(|| command.clone());
+            println!("Checking '{}':", task_name);
+
+            #[cfg(not(windows))]
+            let status = Command::new("sh").arg("-c").arg(&command).status()?;
+            #[cfg(windows)]
+            let status = Command::new("cmd").arg("/c").arg(&command).status()?;
+
+            if status.success() {
+                println!("Success!");
+            } else {
+                return Err("Failed".into());
+            }
+            completed_commands.insert(command);
         }
     }
 
     Ok(())
 }
 
-fn handle_github(root_dir: &Path) -> Result<github::CiConfig> {
+fn handle_github(root_dir: &Path) -> Result<Vec<github::CiConfig>> {
     let github_workflows_dir = {
         let mut gh = root_dir.to_path_buf();
         gh.push(".github");
@@ -78,16 +92,27 @@ fn handle_github(root_dir: &Path) -> Result<github::CiConfig> {
         gh
     };
 
-    let workflow = read_dir(github_workflows_dir)
+    let mut paths = read_dir(github_workflows_dir)
         .map_err(|_| "Unable to find CI configuration")?
-        .filter_map(|entry| entry.ok())
+        .filter_map(std::result::Result::ok)
         .map(|entry| entry.path())
-        .next()
-        .ok_or("Missing GitHub workflow")?;
+        .collect::<Vec<PathBuf>>();
+    // Sort the workflow files alphabetically, so they run
+    // in deterministic order.
+    paths.sort();
 
-    Ok(github::CiConfig::try_from(
-        read_to_string(workflow)?.as_str(),
-    )?)
+    let configs = paths
+        .into_iter()
+        .map(|path| -> Result<github::CiConfig> {
+            Ok(github::CiConfig::try_from(read_to_string(path)?.as_str())?)
+        })
+        .collect::<Result<Vec<github::CiConfig>>>()?;
+
+    if configs.is_empty() {
+        return Err("failed to find github config".into());
+    }
+
+    Ok(configs)
 }
 
 fn handle_gitlab(root_dir: &Path) -> Result<GitlabCiConfig> {

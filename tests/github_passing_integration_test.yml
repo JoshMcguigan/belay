@@ -11,3 +11,5 @@ jobs:
     - uses: actions/checkout@v1
     - name: Say hello
       run: echo hello
+    - name: Say goodbye
+      run: echo goodbye
