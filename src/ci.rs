@@ -43,3 +43,17 @@ impl TaskList for github::CiConfig {
             .collect()
     }
 }
+
+impl TaskList for gitlab::CiConfig {
+    fn all_tasks(&self) -> Vec<Task> {
+        self.jobs
+            .values()
+            .filter_map(|job| job.script.as_ref())
+            .flat_map(|script: &Vec<String>| script)
+            .map(|cmd| Task {
+                name: None,
+                command: cmd.clone(),
+            })
+            .collect()
+    }
+}

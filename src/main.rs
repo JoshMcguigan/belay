@@ -15,7 +15,7 @@ mod args;
 use args::{Args, Subcommand};
 
 mod ci;
-use ci::{github, gitlab::GitlabCiConfig, Task, TaskList};
+use ci::{github, gitlab, Task, TaskList};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -115,7 +115,7 @@ fn handle_github(root_dir: &Path) -> Result<Vec<github::CiConfig>> {
     Ok(configs)
 }
 
-fn handle_gitlab(root_dir: &Path) -> Result<GitlabCiConfig> {
+fn handle_gitlab(root_dir: &Path) -> Result<gitlab::CiConfig> {
     let file_path = {
         let mut path = root_dir.to_path_buf();
         path.push(".gitlab-ci.yml");
@@ -123,7 +123,7 @@ fn handle_gitlab(root_dir: &Path) -> Result<GitlabCiConfig> {
         path
     };
 
-    Ok(serde_yaml::from_str::<GitlabCiConfig>(&read_to_string(
+    Ok(serde_yaml::from_str::<gitlab::CiConfig>(&read_to_string(
         file_path,
     )?)?)
 }

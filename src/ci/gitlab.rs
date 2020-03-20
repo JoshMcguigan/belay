@@ -1,16 +1,14 @@
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use super::{Task, TaskList};
-
 #[derive(Deserialize)]
-pub struct GitlabCiConfig {
+pub struct CiConfig {
     #[allow(dead_code)]
     image: Option<String>,
     #[allow(dead_code)]
     stages: Option<Vec<String>>,
     #[serde(flatten)]
-    jobs: HashMap<String, GitlabCiConfigJob>,
+    pub(super) jobs: HashMap<String, CiConfigJob>,
 }
 
 /// All fields which aren't explicitly configured in this struct are
@@ -21,22 +19,8 @@ pub struct GitlabCiConfig {
 /// which have extra fields in the root (see the `cache` key
 /// in the example gitlab file).
 #[derive(Deserialize)]
-pub struct GitlabCiConfigJob {
-    script: Option<Vec<String>>,
-}
-
-impl TaskList for GitlabCiConfig {
-    fn all_tasks(&self) -> Vec<Task> {
-        self.jobs
-            .values()
-            .filter_map(|job| job.script.as_ref())
-            .flat_map(|script: &Vec<String>| script)
-            .map(|cmd| Task {
-                name: None,
-                command: cmd.clone(),
-            })
-            .collect()
-    }
+pub struct CiConfigJob {
+    pub(super) script: Option<Vec<String>>,
 }
 
 #[cfg(test)]
@@ -49,11 +33,19 @@ mod tests {
     fn parse_gitlab_yaml() -> Result<()> {
         let gitlab_yaml = include_str!("../../tests/gitlab_parse_check.yml");
 
-        let gitlab_ci_config = serde_yaml::from_str::<GitlabCiConfig>(gitlab_yaml)?;
+        let gitlab_ci_config = serde_yaml::from_str::<CiConfig>(gitlab_yaml)?;
 
-        // tasks returns two less than all tasks because we
-        // don't want to `rustup component add`
-        assert_eq!(3, gitlab_ci_config.tasks().len());
+        assert_eq!(
+            5,
+            gitlab_ci_config.jobs.values().fold(0, |mut acc, job| {
+                acc += job
+                    .script
+                    .as_ref()
+                    .map(|scripts| scripts.len())
+                    .unwrap_or(0);
+                acc
+            })
+        );
 
         Ok(())
     }
