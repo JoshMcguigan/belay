@@ -11,6 +11,7 @@ pub struct CiConfig {
     #[allow(dead_code)]
     pub name: String,
     pub jobs: HashMap<String, CiConfigJob>,
+    pub on: Vec<CiConfigTrigger>,
 }
 
 pub struct CiConfigJob {
@@ -20,6 +21,23 @@ pub struct CiConfigJob {
 pub struct CiConfigJobStep {
     pub name: Option<String>,
     pub run: String,
+}
+
+pub enum CiConfigTrigger {
+    Push,
+    PullRequest,
+}
+
+impl TryFrom<&str> for CiConfigTrigger {
+    type Error = ();
+
+    fn try_from(input: &str) -> Result<Self, Self::Error> {
+        match input {
+            "push" => Ok(CiConfigTrigger::Push),
+            "pull_request" => Ok(CiConfigTrigger::PullRequest),
+            _ => Err(()),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -59,9 +77,37 @@ impl TryFrom<&str> for CiConfig {
 
         let jobs = &yaml["jobs"].as_hash().ok_or(YamlParseError::MissingField)?;
 
+        // We attempt to parse the `on` field as both an array as well as a map,
+        // then use whichever of the two worked. It would be possible to only
+        // attempt to parse this as a map if parsing as an array fails, but
+        // in practice there won't be any meaningful performance difference.
+        let on_as_vec = yaml["on"].as_vec().map(|a| {
+            a.iter()
+                .filter_map(|item| {
+                    item.as_str()
+                        .iter()
+                        .filter_map(|&s| CiConfigTrigger::try_from(s).ok())
+                        .next()
+                })
+                .collect()
+        });
+        let on_as_map = yaml["on"].as_hash().map(|hashmap| {
+            hashmap
+                .keys()
+                .filter_map(|item| item.as_str())
+                .filter_map(|s| CiConfigTrigger::try_from(s).ok())
+                .collect()
+        });
+        let on = match (on_as_vec, on_as_map) {
+            (Some(x), _) => x,
+            (_, Some(x)) => x,
+            (None, None) => vec![],
+        };
+
         let mut ci_config = CiConfig {
             name: (*name).to_string(),
             jobs: HashMap::new(),
+            on,
         };
 
         for (job_name, job) in jobs.iter() {
@@ -118,6 +164,19 @@ mod tests {
 
         // the `uses` step is skipped during parsing
         assert_eq!(5, job.steps.len());
+
+        assert_eq!(2, github_ci_config.on.len());
+
+        Ok(())
+    }
+
+    #[test]
+    fn parse_github_yaml_push_to_branch() -> Result<()> {
+        let github_yaml = include_str!("../../tests/github_parse_check_on_push_to_branch.yml");
+
+        let github_ci_config = CiConfig::try_from(github_yaml)?;
+
+        assert_eq!(2, github_ci_config.on.len());
 
         Ok(())
     }

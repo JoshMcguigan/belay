@@ -1,0 +1,16 @@
+name: Rust
+
+on:
+  pull_request:
+  push:
+    branches:
+      -master
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: A Step
+      run: echo stepping
