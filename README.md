@@ -35,6 +35,20 @@ $ belay hook commit
 cargo install --force belay
 ```
 
+### Configuration
+
+Belay creates a configuration file in the following location:
+
+* Linux:   /home/alice/.config/belay/config.yml
+* Windows: C:\Users\Alice\AppData\Roaming\cargo\belay\config.yml
+* macOS:   /Users/Alice/Library/Preferences/com.cargo.belay/config.yml
+
+The keys of the config file are described below:
+
+* command\_blacklist
+  * array of strings
+  * belay will skip CI tasks which contain any string in the command blacklist
+
 ## License
 
 Licensed under either of
