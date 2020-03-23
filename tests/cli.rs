@@ -89,6 +89,10 @@ Success!
         .assert()
         .success();
     Command::new("git")
+        .arg("-c")
+        .arg("user.name='Josh'")
+        .arg("-c")
+        .arg("user.email='Josh@email.com'")
         .arg("commit")
         .arg("-m")
         .arg("\"test commit\"")
