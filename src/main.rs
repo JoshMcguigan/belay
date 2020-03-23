@@ -17,6 +17,9 @@ use args::{Args, Subcommand};
 mod ci;
 use ci::{github, gitlab, Task, TaskList, Trigger};
 
+mod config;
+use config::Config;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
@@ -55,7 +58,7 @@ fn main() -> Result<()> {
 
     let mut completed_commands = HashSet::new();
     for ci_config in ci_configs {
-        for task in ci_config.tasks(get_triggers()) {
+        for task in ci_config.tasks(Config::read(), get_triggers()) {
             let Task { name, command, .. } = task;
 
             // we want to de-duplicate commands across CI configurations
