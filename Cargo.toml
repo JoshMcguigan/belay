@@ -4,11 +4,12 @@ description = "Run your CI checks locally to git push with confidence"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/JoshMcguigan/belay"
 readme = "README.md"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Josh Mcguigan"]
 edition = "2018"
 
 [dependencies]
+directories = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 yaml-rust = "0.4"

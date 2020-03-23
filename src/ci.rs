@@ -1,3 +1,5 @@
+use crate::Config;
+
 pub mod github;
 pub mod gitlab;
 
@@ -59,7 +61,7 @@ pub trait TaskList {
 
     /// Returns the subset of CI tasks that we do
     /// want to execute in belay.
-    fn tasks(&self, triggers: Vec<Trigger>) -> Vec<Task> {
+    fn tasks(&self, config: Config, triggers: Vec<Trigger>) -> Vec<Task> {
         fn is_applicable(applicabilities: &[Applicability], triggers: &[Trigger]) -> bool {
             for applicability in applicabilities {
                 for trigger in triggers {
@@ -75,9 +77,7 @@ pub trait TaskList {
         self.all_tasks()
             .into_iter()
             .filter(|task| {
-                let command_blacklist = vec!["apt install", "rustup component add"];
-
-                for blacklisted_command in command_blacklist {
+                for blacklisted_command in &config.command_blacklist {
                     if task.command.contains(blacklisted_command) {
                         return false;
                     }
