@@ -7,11 +7,13 @@ use std::{
 
 use yaml_rust::YamlLoader;
 
+use super::Applicability;
+
 pub struct CiConfig {
     #[allow(dead_code)]
     pub name: String,
     pub jobs: HashMap<String, CiConfigJob>,
-    pub on: Vec<CiConfigTrigger>,
+    pub on: Vec<Applicability>,
 }
 
 pub struct CiConfigJob {
@@ -23,20 +25,11 @@ pub struct CiConfigJobStep {
     pub run: String,
 }
 
-pub enum CiConfigTrigger {
-    Push,
-    PullRequest,
-}
-
-impl TryFrom<&str> for CiConfigTrigger {
-    type Error = ();
-
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        match input {
-            "push" => Ok(CiConfigTrigger::Push),
-            "pull_request" => Ok(CiConfigTrigger::PullRequest),
-            _ => Err(()),
-        }
+fn applicability_from(input: &str, branches: Option<Vec<String>>) -> Result<Applicability, ()> {
+    match input {
+        "push" => Ok(Applicability::Push { branches }),
+        "pull_request" => Ok(Applicability::PullRequest),
+        _ => Err(()),
     }
 }
 
@@ -86,16 +79,24 @@ impl TryFrom<&str> for CiConfig {
                 .filter_map(|item| {
                     item.as_str()
                         .iter()
-                        .filter_map(|&s| CiConfigTrigger::try_from(s).ok())
+                        .filter_map(|&s| applicability_from(s, None).ok())
                         .next()
                 })
                 .collect()
         });
         let on_as_map = yaml["on"].as_hash().map(|hashmap| {
             hashmap
-                .keys()
-                .filter_map(|item| item.as_str())
-                .filter_map(|s| CiConfigTrigger::try_from(s).ok())
+                .iter()
+                .filter_map(|(k, v)| k.as_str().map(|k| (k, v)))
+                .filter_map(|(k, v)| {
+                    let branches = v["branches"].as_vec().map(|branches| {
+                        branches
+                            .iter()
+                            .filter_map(|branch| branch.as_str().map(|s| s.to_string()))
+                            .collect()
+                    });
+                    applicability_from(k, branches).ok()
+                })
                 .collect()
         });
         let on = match (on_as_vec, on_as_map) {

@@ -41,6 +41,93 @@ fn belay_in_no_ci_dir() -> TestResult {
 }
 
 #[test]
+fn belay_in_github_ci_dir_with_restricted_applicability() -> TestResult {
+    let working_dir = TempDir::new()?;
+
+    Command::new("git")
+        .arg("init")
+        .current_dir(working_dir.path())
+        .assert()
+        .success();
+    fs::create_dir_all(working_dir.child(".github").child("workflows").path())?;
+    let github_yaml = include_str!("./github_parse_check_on_push_to_branch.yml");
+    working_dir
+        .child(".github")
+        .child("workflows")
+        .child("rust.yml")
+        .write_str(github_yaml)?;
+
+    // Should run while on master branch
+    Command::cargo_bin(crate_name!())?
+        .current_dir(working_dir.path())
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::similar(
+                r#"Checking 'A Step':
+stepping
+Success!
+"#,
+            )
+            .normalize(),
+        );
+
+    // Should not run while on other branch
+    Command::new("git")
+        .arg("checkout")
+        .arg("-b")
+        .arg("develop")
+        .current_dir(working_dir.path())
+        .assert()
+        .success();
+    // add and commit here to allow our current branch name
+    // lookup to work
+    Command::new("git")
+        .arg("add")
+        .arg(".")
+        .current_dir(working_dir.path())
+        .assert()
+        .success();
+    Command::new("git")
+        .arg("commit")
+        .arg("-m")
+        .arg("\"test commit\"")
+        .current_dir(working_dir.path())
+        .assert()
+        .success();
+    Command::cargo_bin(crate_name!())?
+        .current_dir(working_dir.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::similar(""));
+
+    // should run if upstream is set, since the yml specifies it
+    // is triggered on pull request
+    Command::new("git")
+        .arg("remote")
+        .arg("add")
+        .arg("upstream")
+        .arg("test.com")
+        .current_dir(working_dir.path())
+        .assert()
+        .success();
+    Command::cargo_bin(crate_name!())?
+        .current_dir(working_dir.path())
+        .assert()
+        .success()
+        .stdout(
+            predicate::str::similar(
+                r#"Checking 'A Step':
+stepping
+Success!
+"#,
+            )
+            .normalize(),
+        );
+
+    Ok(())
+}
+#[test]
 fn belay_in_github_ci_dir() -> TestResult {
     let working_dir = TempDir::new()?;
 

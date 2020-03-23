@@ -15,7 +15,7 @@ mod args;
 use args::{Args, Subcommand};
 
 mod ci;
-use ci::{github, gitlab, Task, TaskList};
+use ci::{github, gitlab, Task, TaskList, Trigger};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -55,8 +55,8 @@ fn main() -> Result<()> {
 
     let mut completed_commands = HashSet::new();
     for ci_config in ci_configs {
-        for task in ci_config.tasks() {
-            let Task { name, command } = task;
+        for task in ci_config.tasks(get_triggers()) {
+            let Task { name, command, .. } = task;
 
             // we want to de-duplicate commands across CI configurations
             if completed_commands.contains(&command) {
@@ -144,5 +144,59 @@ fn find_git_root() -> Option<PathBuf> {
         if !dir.exists() {
             return None;
         }
+    }
+}
+
+/// Get the best estimate of the triggers for this CI run.
+///
+/// We can't know for sure if this will turn into a pull
+/// request, but we assume if there is an upstream remote
+/// that it will.
+fn get_triggers() -> Vec<Trigger> {
+    let mut triggers = vec![Trigger::Push {
+        branch: current_branch(),
+    }];
+
+    if has_upstream() {
+        triggers.push(Trigger::PullRequest);
+    }
+
+    triggers
+}
+
+/// Used to guess if this will turn into a pull request. Has the
+/// limitation that it only works if the upstream repository is
+/// named 'upstream'.
+fn has_upstream() -> bool {
+    let command = "git remote";
+    #[cfg(not(windows))]
+    let output = Command::new("sh").arg("-c").arg(&command).output();
+    #[cfg(windows)]
+    let output = Command::new("cmd").arg("/c").arg(&command).output();
+
+    let output = output.expect("failed to run git command");
+
+    assert!(output.status.success(), "command to get git remotes failed");
+
+    let remotes = String::from_utf8_lossy(&output.stdout).into_owned();
+    remotes.contains("upstream")
+}
+
+fn current_branch() -> String {
+    let command = "git rev-parse --abbrev-ref HEAD";
+    #[cfg(not(windows))]
+    let output = Command::new("sh").arg("-c").arg(&command).output();
+    #[cfg(windows)]
+    let output = Command::new("cmd").arg("/c").arg(&command).output();
+
+    let output = output.expect("failed to run git command");
+
+    if output.status.success() {
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    } else {
+        // We assume that if this command fails it is because no commits exist in this
+        // repository. In that case, use 'master' as a placeholder branch name. This is
+        // unlikely to happen often in real-world usage, but it happens in integration tests.
+        "master".into()
     }
 }
