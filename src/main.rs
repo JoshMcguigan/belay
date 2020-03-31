@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     convert::TryFrom,
     env::current_dir,
     fs::{read_dir, read_to_string, File},
@@ -9,7 +10,7 @@ use std::{
 use structopt::StructOpt;
 
 #[cfg(not(windows))]
-use std::{collections::HashSet, fs::Permissions, os::unix::fs::PermissionsExt};
+use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
 mod args;
 use args::{Args, Subcommand};
